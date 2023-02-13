@@ -1,5 +1,5 @@
 # terminal
-A light-weight C-based custom shell implementation. Supports basic inbuilt shell commands like ls, cd etc, as well as more complicated operators like pipe (|), I/O redirection. Implements custom signal handler for some signal. 
+A light-weight C-based custom shell implementation. Supports basic inbuilt shell commands like ls, cd etc, as well as more complicated operators like pipe ```|```, I/O redirection. Implements custom signal handler for some signal. 
 #Installation
 Tested on a linux environment but should be easily portable to Unix or Windows. 
 
