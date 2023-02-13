@@ -2,11 +2,11 @@ CC=gcc
 CFLAGS=-g -pedantic -std=gnu17 -Wall -Werror -Wextra
 
 .PHONY: all
-all: terminal
+all: nyush
 
-terminal: terminal.o cmdutils.o
+nyush: nyush.o cmdutils.o
 
-terminal.o: terminal.c cmdutils.o
+nyush.o: nyush.c cmdutils.o
 
 cmdutils.o: cmdutils.c cmdutils.h
 
