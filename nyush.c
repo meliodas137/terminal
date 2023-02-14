@@ -10,22 +10,23 @@ Class Slides
 #include "cmdutils.h"
 
 int main(){
-    while(1){
-        char* cwd = malloc(1000);
-        if(getcwd(cwd, 1000) == NULL) {
-            printf("Error: Unable to find the cwd");
-            return -1;
-        }; 
-        if(cwd[1] != '\0') {
-            cwd = cwd + 1;
-        }
-        printf("[nyush %s]$ ", cwd);
-        fflush(stdout);
-        char cmd[1000];
-        fgets(cmd, sizeof cmd, stdin);
+    char* cmd = malloc(10000);
+    char* cwd = malloc(10000);
+    if(getcwd(cwd, 1000) == NULL) {
+        printf("Error: Unable to find the cwd");
+        return -1;
+    }
+    char* dirName = getDirName(cwd);
+    printf("[nyush %s]$ ", dirName);
+    fflush(stdout);
+    while(fgets(cmd, sizeof cmd, stdin) != NULL){
         if(!validateCmd(cmd)){
             printf("Error: invalid command\n");
         }
+        printf("[nyush %s]$ ", dirName);
+        fflush(stdout);
     }
+    free(cwd);
+    free(cmd);
     return 0;
 }
