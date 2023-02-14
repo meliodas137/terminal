@@ -53,3 +53,6 @@ dkms.conf
 
 # Folders for test
 nyush-autograder/
+nyush
+nyush-autograder.tar.xz
+.vscode/settings.json

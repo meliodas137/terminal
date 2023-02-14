@@ -22,11 +22,15 @@ int main(){
     while(fgets(cmd, sizeof cmd, stdin) != NULL){
         if(!validateCmd(cmd)){
             printf("Error: invalid command\n");
+        } else {
+            char **cmdMap = splitCmd(cmd);
+            int idx = 0;
+            while(cmdMap[idx++] != NULL) free(cmdMap[idx]);
+            free(cmdMap);
         }
         printf("[nyush %s]$ ", dirName);
         fflush(stdout);
     }
     free(cwd);
-    free(cmd);
     return 0;
 }

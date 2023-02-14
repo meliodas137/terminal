@@ -3,5 +3,6 @@
 
 bool validateCmd(char* cmd);
 char* getDirName(char* path);
+char** splitCmd(char* cmd);
 
 #endif
