@@ -11,7 +11,6 @@ bool validateCmd(char* cmd){
 char* getDirName(char* path){
     int len = -1;
     while(path[++len] != '\0');
-    fflush(stdout);
     if(len == 1) return path;
     int start = len;
     while(path[--start] != '/');
@@ -29,13 +28,12 @@ char** splitCmd(char* cmd) {
             cmdMap[currItem] = malloc(i-start+1);
             int j = 0;
             while(start<i) cmdMap[currItem][j++] = cmd[start++];
-            cmdMap[currItem][start] = '\0';
+            cmdMap[currItem][j] = '\0';
             currItem++;
             start++;
         }
     }
 
-    free(cmd);
     cmdMap[countCmdParts] = NULL;
     return cmdMap;
 }

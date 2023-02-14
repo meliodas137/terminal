@@ -1,6 +1,7 @@
 /*
 https://www.ibm.com/docs/en/zos/2.3.0?topic=functions-getcwd-get-path-name-working-directory
 https://stackoverflow.com/questions/30220691/how-to-get-empty-input-or-only-enter-in-c
+https://www.educative.io/answers/how-to-write-regular-expressions-in-c
 Class Slides
 */
 #include <stdio.h>
@@ -10,8 +11,8 @@ Class Slides
 #include "cmdutils.h"
 
 int main(){
-    char* cmd = malloc(10000);
-    char* cwd = malloc(10000);
+    char* cmd = malloc(1000);
+    char* cwd = malloc(1000);
     if(getcwd(cwd, 1000) == NULL) {
         printf("Error: Unable to find the cwd");
         return -1;
@@ -19,7 +20,7 @@ int main(){
     char* dirName = getDirName(cwd);
     printf("[nyush %s]$ ", dirName);
     fflush(stdout);
-    while(fgets(cmd, sizeof cmd, stdin) != NULL){
+    while(fgets(cmd, 1000, stdin) != NULL){
         if(!validateCmd(cmd)){
             printf("Error: invalid command\n");
         } else {
@@ -31,6 +32,7 @@ int main(){
         printf("[nyush %s]$ ", dirName);
         fflush(stdout);
     }
+    free(cmd);
     free(cwd);
     return 0;
 }
