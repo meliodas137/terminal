@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <regex.h>
+#include <string.h>
 
 #ifndef _CMDUTILS_H_
 #define _CMDUTILS_H_

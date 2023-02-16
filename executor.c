@@ -12,6 +12,6 @@ void executeCmd(char* cmd){
 }
 
 int runCmd(char** cmdMap){
-    if(cmdMap) printf("%s", cmdMap[0]);
+    if(cmdMap) return 1;
     return 0;
 }

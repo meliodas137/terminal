@@ -2,6 +2,7 @@
 https://www.ibm.com/docs/en/zos/2.3.0?topic=functions-getcwd-get-path-name-working-directory
 https://stackoverflow.com/questions/30220691/how-to-get-empty-input-or-only-enter-in-c
 https://www.educative.io/answers/how-to-write-regular-expressions-in-c
+https://www.w3schools.com/c/c_strings.php
 Class Slides
 */
 #include "executor.h"
