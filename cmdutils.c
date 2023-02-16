@@ -1,11 +1,16 @@
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdlib.h>
 #include "cmdutils.h"
 
-bool validateCmd(char* cmd){
-    if(cmd[0] == '\n') return true;
+bool validateCmd(char** cmd){
+    if(cmd) return true;
     return true;
+}
+
+char* getcurDir(char* buffer) {
+    if(getcwd(buffer, 1000) == NULL) {
+        printf("Error: Unable to find the cwd");
+        return buffer;
+    }
+    return getDirName(buffer);
 }
 
 char* getDirName(char* path){
