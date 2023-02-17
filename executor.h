@@ -13,5 +13,6 @@ int runCmd(char** cmdMap);
 int handleBuiltInCmd(char** cmdMap);
 int handlePrograms(char** cmdMap);
 int sysCall(char** argv, char* readFrom, char* writeTo, int appendMode);
+void handleIORedirect(char* readFrom, char* writeTo, int appendMode);
 
 #endif

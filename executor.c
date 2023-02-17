@@ -22,10 +22,7 @@ int runCmd(char** cmdMap){
     if(strcmp(cmdMap[0], "cd") == 0 || strcmp(cmdMap[0], "exit") == 0 
         || strcmp(cmdMap[0], "fg") == 0 || strcmp(cmdMap[0], "jobs") == 0) return handleBuiltInCmd(cmdMap);
     
-    else {
-        return handlePrograms(cmdMap);
-    }
-    return 0;
+    return handlePrograms(cmdMap);
 }
 
 int handlePrograms(char** cmdMap) {
@@ -53,37 +50,39 @@ int handlePrograms(char** cmdMap) {
 int sysCall(char** argv, char* readFrom, char* writeTo, int appendMode){
     int pid = fork();
     if(pid == 0) {
-        if(readFrom != NULL) {
-            int accessible = access(readFrom, R_OK);
-            if(accessible == -1) exit(4);
-            else {
-                int fd = open(readFrom, O_RDONLY);
-                dup2(fd, 0);
-                close(fd);
-            }
-        }
-        if(writeTo != NULL) {
-            int fd ;
-            if(appendMode == 1) fd = open(writeTo, O_CREAT|O_WRONLY|O_APPEND, S_IRUSR|S_IWUSR);
-            else fd = open(writeTo, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
-            dup2(fd, 1);
-            close(fd);
-        }
+        handleIORedirect(readFrom, writeTo, appendMode);
         execv(argv[0], argv);
-        // printf("errno %d", errno);
         exit(5);
     }
     else {
         int exitCode = 0;
         waitpid(pid, &exitCode, 0);
         free(argv);
-        // printf("errno-- %d", errno);
-        // if(WIFEXITED(errno)) printf("errno %d", WEXITSTATUS(errno));
         if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -4;
         if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5) return -5;
     }
 
     return 0;
+}
+
+void handleIORedirect(char* readFrom, char* writeTo, int appendMode) {
+    if(readFrom != NULL) {
+        int accessible = access(readFrom, R_OK);
+        if(accessible == -1) exit(4);
+        else {
+            int fd = open(readFrom, O_RDONLY);
+            dup2(fd, 0);
+            close(fd);
+        }
+    }
+    if(writeTo != NULL) {
+        int fd ;
+        if(appendMode == 1) fd = open(writeTo, O_CREAT|O_WRONLY|O_APPEND, S_IRUSR|S_IWUSR);
+        else fd = open(writeTo, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
+        dup2(fd, 1);
+        close(fd);
+    }
+    return;
 }
 
 int handleBuiltInCmd(char** cmdMap) {
