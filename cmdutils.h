@@ -12,5 +12,7 @@ bool validateCmd(char** cmd);
 char* getDirName(char* path);
 char** splitCmd(char* cmd);
 char* getcurDir(char* buffer);
+void freeStrMap(char** cmdMap);
+char* getSanitizedCmd(char* cmd);
 
 #endif

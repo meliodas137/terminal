@@ -79,3 +79,28 @@ char** splitCmd(char* cmd) {
     cmdMap[countCmdParts] = NULL;
     return cmdMap;
 }
+
+void freeStrMap(char** cmdMap){
+    int idx = 0;
+    while(cmdMap[idx] != NULL) free(cmdMap[idx++]);
+    free(cmdMap);
+    return;
+}
+
+char* getSanitizedCmd(char* cmd){
+    if(cmd[0] == '/') return cmd;
+    int idx = 0;
+    char* newCmd;
+    while(cmd[idx] != '\0') if(cmd[idx++] == '/') {
+        newCmd = malloc(strlen(cmd)+2);
+        strcpy(newCmd, "./");
+        strcat(newCmd, cmd);
+        free(cmd);
+        return newCmd;
+    }
+    newCmd = malloc(strlen(cmd)+9);
+    strcpy(newCmd, "/usr/bin/");
+    strcat(newCmd, cmd);
+    free(cmd);
+    return newCmd;
+}
