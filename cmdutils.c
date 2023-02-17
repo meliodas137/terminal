@@ -4,7 +4,7 @@ bool validateCmd(char** cmd){
     int idx = 0;
     regex_t notAllowed;
     regcomp(&notAllowed, "[\40\11\76\74\174\52\41\140\47\42]", REG_EXTENDED);
-    int endState = -1, psuedoEnd = -2, currState = 0, terminate = 6;
+    int endState = -1, psuedoEnd = -2, currState = 0, terminate = 6, terminateStart = 7;
     while(cmd[idx] != NULL) {
         if(currState == endState) return false;
         if(currState == 0 && (strcmp(cmd[idx], "cd") == 0 || strcmp(cmd[idx], "fg") == 0)) currState = 1;
@@ -22,17 +22,16 @@ bool validateCmd(char** cmd){
                 || strcmp(cmd[idx], "exit") == 0 || strcmp(cmd[idx], "jobs") == 0) return false;
             currState = terminate;
         }
-        else if(currState == 4 && regexec(&notAllowed, cmd[idx], 0, NULL, 0) == REG_NOMATCH) currState = 7;
+        else if(currState == 4 && regexec(&notAllowed, cmd[idx], 0, NULL, 0) == REG_NOMATCH) currState = terminateStart;
         else if(currState == 5 && strcmp(cmd[idx], "|") == 0) currState = 3;
         else if(currState == 5 && (strcmp(cmd[idx], ">>") == 0 || strcmp(cmd[idx], ">") == 0)) currState = 8;
-        else if(currState == 7 && regexec(&notAllowed, cmd[idx], 0, NULL, 0) == REG_NOMATCH) currState = 9;
-        else if(currState == 9 && strcmp(cmd[idx], "<") == 0) currState = 8;
+        else if(currState == terminateStart && strcmp(cmd[idx], "<") == 0) currState = 8;
         else if(currState == 8 && regexec(&notAllowed, cmd[idx], 0, NULL, 0) == REG_NOMATCH) currState = endState;
         else return false;
         idx++;
     }
     // printf("idx:%d, currstate:%d\n", idx, currState);
-    if(idx == 0 || endState == currState || currState == psuedoEnd || currState == terminate) return true;
+    if(idx == 0 || endState == currState || currState == psuedoEnd || currState == terminate || currState == terminateStart || currState == 5) return true;
     return false;
 }
 

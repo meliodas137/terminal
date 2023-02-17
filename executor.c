@@ -1,5 +1,4 @@
 #include "executor.h"
-#include <sys/wait.h>
 #include "cmdutils.h"
 
 void executeCmd(char* cmd){
@@ -9,6 +8,7 @@ void executeCmd(char* cmd){
         if(code == -1) fprintf(stderr, "Error: invalid directory\n"); //cd dir error
         if(code == -2) fprintf(stderr, "Error: there are suspended jobs\n"); //exit error
         if(code == -3) fprintf(stderr, "Error: invalid job\n"); //fg error
+        if(code == -4) fprintf(stderr, "Error: invalid file\n"); //file read error
         if(code == -5) fprintf(stderr, "Error: invalid program\n"); //program invalid
     } else {
         fprintf(stderr, "Error: invalid command\n");
@@ -30,31 +30,59 @@ int runCmd(char** cmdMap){
 
 int handlePrograms(char** cmdMap) {
     int argc = 0, idx = -1;
-    regex_t notAllowed;
-    regcomp(&notAllowed, "[\76\74\174]", REG_EXTENDED);
+    int appendMode = 0;
+    char* writeTo = NULL, *readFrom = NULL;
     while(cmdMap[++idx] != NULL){
-        if(regexec(&notAllowed, cmdMap[idx], 0, NULL, 0) == REG_NOMATCH) argc++;
-        else break;
+        if(strcmp("<", cmdMap[idx]) == 0) readFrom = cmdMap[++idx];
+        else if(strcmp(">", cmdMap[idx]) == 0) writeTo = cmdMap[++idx];
+        else if(strcmp(">>", cmdMap[idx]) == 0) {
+            writeTo = cmdMap[++idx];
+            appendMode = 1;
+        }
+        else if(strcmp("|", cmdMap[idx]) == 0) break;
+        else argc++;
     }
     char** argv = malloc((argc+1)*sizeof(char*));
     argv[argc] = NULL;
     cmdMap[0] = getSanitizedCmd(cmdMap[0]);
+    // printf("cmdMap %s, %d\n", cmdMap[0], argc);
     while(--argc >= 0) argv[argc] = cmdMap[argc];
-    return sysCall(argv);
+    return sysCall(argv, readFrom, writeTo, appendMode);
 }
 
-int sysCall(char** argv){
-    if(fork() == 0) {
+int sysCall(char** argv, char* readFrom, char* writeTo, int appendMode){
+    int pid = fork();
+    if(pid == 0) {
+        if(readFrom != NULL) {
+            int accessible = access(readFrom, R_OK);
+            if(accessible == -1) exit(4);
+            else {
+                int fd = open(readFrom, O_RDONLY);
+                dup2(fd, 0);
+                close(fd);
+            }
+        }
+        if(writeTo != NULL) {
+            int fd ;
+            if(appendMode == 1) fd = open(writeTo, O_CREAT|O_WRONLY|O_APPEND, S_IRUSR|S_IWUSR);
+            else fd = open(writeTo, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
+            dup2(fd, 1);
+            close(fd);
+        }
         execv(argv[0], argv);
         // printf("errno %d", errno);
-        exit(4);
+        exit(5);
     }
-    int exitCode = 0;
-    wait(&exitCode);
-    free(argv);
-    // printf("errno-- %d", errno);
-    // if(WIFEXITED(errno)) printf("errno %d", WEXITSTATUS(errno));
-    if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -5;
+    else {
+        int exitCode = 0;
+        waitpid(pid, &exitCode, 0);
+        free(argv);
+        // printf("errno-- %d", errno);
+        // if(WIFEXITED(errno)) printf("errno %d", WEXITSTATUS(errno));
+        if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -4;
+        if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5) return -5;
+    }
+
     return 0;
 }
 
