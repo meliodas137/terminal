@@ -1,6 +1,8 @@
 #include "executor.h"
 #include "cmdutils.h"
 
+#define MIN(X,Y) ((X > Y) ? Y : X)
+
 void executeCmd(char* cmd){
     char** cmdMap = splitCmd(cmd);
     if(validateCmd(cmdMap)) {
@@ -26,38 +28,37 @@ int runCmd(char** cmdMap){
 }
 
 int handlePrograms(char** cmdMap) {
-    int argc = 0, idx = -1;
-    int appendMode = 0;
-    char* writeTo = NULL, *readFrom = NULL;
+    int argc = 0, idx = -1, argd = 1000;
+
     while(cmdMap[++idx] != NULL){
-        if(strcmp("<", cmdMap[idx]) == 0) readFrom = cmdMap[++idx];
-        else if(strcmp(">", cmdMap[idx]) == 0) writeTo = cmdMap[++idx];
-        else if(strcmp(">>", cmdMap[idx]) == 0) {
-            writeTo = cmdMap[++idx];
-            appendMode = 1;
-        }
-        else if(strcmp("|", cmdMap[idx]) == 0) break;
-        else argc++;
+        if(strcmp("|", cmdMap[idx]) == 0) break;
+        if(strcmp("<", cmdMap[idx]) == 0 || strcmp(">>", cmdMap[idx]) == 0 || strcmp(">", cmdMap[idx]) == 0) argd = MIN(argd, idx);
+        argc++;
     }
+    argd = MIN(argd, argc);
     char** argv = malloc((argc+1)*sizeof(char*));
+    char** argvd = malloc((argd+1)*sizeof(char*));
     argv[argc] = NULL;
+    argvd[argd] = NULL;
     cmdMap[0] = getSanitizedCmd(cmdMap[0]);
     // printf("cmdMap %s, %d\n", cmdMap[0], argc);
     while(--argc >= 0) argv[argc] = cmdMap[argc];
-    return sysCall(argv, readFrom, writeTo, appendMode);
+    while(--argd >= 0) argvd[argd] = cmdMap[argd];
+    return sysCall(argv, argvd);
 }
 
-int sysCall(char** argv, char* readFrom, char* writeTo, int appendMode){
+int sysCall(char** argv, char** argvd){
     int pid = fork();
     if(pid == 0) {
-        handleIORedirect(readFrom, writeTo, appendMode);
-        execv(argv[0], argv);
+        handleIORedirect(argv);
+        execv(argvd[0], argvd);
         exit(5);
     }
     else {
         int exitCode = 0;
         waitpid(pid, &exitCode, 0);
         free(argv);
+        free(argvd);
         if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -4;
         if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5) return -5;
     }
@@ -65,7 +66,19 @@ int sysCall(char** argv, char* readFrom, char* writeTo, int appendMode){
     return 0;
 }
 
-void handleIORedirect(char* readFrom, char* writeTo, int appendMode) {
+void handleIORedirect(char** argv) {
+    int appendMode = 0, idx = -1;
+    char* writeTo = NULL, *readFrom = NULL;
+
+    while(argv[++idx] != NULL){
+        if(strcmp("<", argv[idx]) == 0) readFrom = argv[++idx];
+        else if(strcmp(">", argv[idx]) == 0) writeTo = argv[++idx];
+        else if(strcmp(">>", argv[idx]) == 0) {
+            writeTo = argv[++idx];
+            appendMode = 1;
+        } 
+    }
+
     if(readFrom != NULL) {
         int accessible = access(readFrom, R_OK);
         if(accessible == -1) exit(4);
@@ -75,6 +88,7 @@ void handleIORedirect(char* readFrom, char* writeTo, int appendMode) {
             close(fd);
         }
     }
+
     if(writeTo != NULL) {
         int fd ;
         if(appendMode == 1) fd = open(writeTo, O_CREAT|O_WRONLY|O_APPEND, S_IRUSR|S_IWUSR);

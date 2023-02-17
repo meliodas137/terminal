@@ -12,7 +12,7 @@ void executeCmd(char* cmd);
 int runCmd(char** cmdMap);
 int handleBuiltInCmd(char** cmdMap);
 int handlePrograms(char** cmdMap);
-int sysCall(char** argv, char* readFrom, char* writeTo, int appendMode);
-void handleIORedirect(char* readFrom, char* writeTo, int appendMode);
+int sysCall(char** argv, char** argvd);
+void handleIORedirect(char** argv);
 
 #endif
