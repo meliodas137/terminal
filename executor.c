@@ -4,7 +4,7 @@
 
 #define MIN(X,Y) ((X > Y) ? Y : X)
  
-char* jobsTable[800];
+char* jobsTable[800] = {NULL};
 int totalJobs = 0;
 
 void executeCmd(char* cmd){
@@ -45,7 +45,6 @@ int handlePrograms(char** cmdMap) {
     argv[argc] = NULL;
     argvd[argd] = NULL;
     cmdMap[0] = getSanitizedCmd(cmdMap[0]);
-    // printf("cmdMap %s, %d\n", cmdMap[0], argc);
     while(--argc >= 0) argv[argc] = cmdMap[argc];
     while(--argd >= 0) argvd[argd] = cmdMap[argd];
     return sysCall(argv, argvd);
@@ -54,27 +53,19 @@ int handlePrograms(char** cmdMap) {
 int sysCall(char** argv, char** argvd){
     int pid = fork();
     if(pid == 0) {
-        // printf("Waiting for the child process\n");
         signal(SIGTSTP, suspendHandler);
-        signal(SIGSTOP, suspendHandler);
         handleIORedirect(argv);
         execv(argvd[0], argvd);
         exit(5);
     }
     else {
-        putinJobsTable(pid, argv);
-        signal(SIGUSR1, jobsHandler);
-        signal(SIGCHLD, childHandler);
-        pause();
+        int exitCode = 0;
+        waitpid(pid, &exitCode, WUNTRACED);
+        if(WIFSTOPPED(exitCode)) putInMap(jobsTable, pid, argv);
         free(argv);
         free(argvd);
-        // int exitCode = 0;
-        // printf("Waiting for the process to sigchld\n");
-        // waitpid(pid, &exitCode, 0);
-        // printf("Waiting for the process AFTER sigchld\n");
-        // free(argv);
-        // if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -4;
-        // else if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5)  return -5;
+        if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -4;
+        else if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5)  return -5;
     }
 
     return 0;
@@ -127,20 +118,8 @@ void handleIORedirect(char** argv) {
 }
 
 void suspendHandler(int sig){
-    kill(getppid(), SIGUSR1);
-    signal(sig, SIG_DFL);
-}
-
-void jobsHandler(int sig) {
-}
-
-void childHandler(int sig) {
-    int exitCode = 0;
-    int pid = waitpid(-1, &exitCode, WNOHANG);
-    // printf("totaljobs before childHandle %d\n", totalJobs);
-    totalJobs = removeFromMap(jobsTable, pid, -1, totalJobs);
-    if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) fprintf(stderr, "Error: invalid file\n");
-    else if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5)  fprintf(stderr, "Error: invalid program\n");
+    if(sig){};
+    raise(SIGSTOP);
 }
 
 int handleBuiltInCmd(char** cmdMap) {
@@ -148,7 +127,7 @@ int handleBuiltInCmd(char** cmdMap) {
         return chdir(cmdMap[1]);
     }
     if(strcmp(cmdMap[0], "exit") == 0) {
-        if(totalJobs != 0) fprintf(stderr, "Error: there are suspended jobs\n");
+        if(jobsTable[0] != NULL) fprintf(stderr, "Error: there are suspended jobs\n");
         else exit(0);
     }
     if(strcmp(cmdMap[0], "jobs") == 0) {
@@ -162,22 +141,27 @@ int handleBuiltInCmd(char** cmdMap) {
 }
 
 void jobs(){
-    int idx = -1;
-    while(++idx < totalJobs) {
+    int idx = 0;
+    while(jobsTable[idx] != NULL) {
         int j = 0;
         while(jobsTable[idx][j++] != ' ');
         printf("[%d] %s\n", idx+1, jobsTable[idx] + j);
+        idx++;
     }
 }
 
 void fg(char* jobNum) {
     int index = atoi(jobNum);
-    if(index > totalJobs) fprintf(stderr,"Error: invalid job");
+    int i = -1;
+    while(jobsTable[++i] != NULL);
+    if(index > i) fprintf(stderr,"Error: invalid job\n");
     else {
-        int pid = removeFromMap(jobsTable, -1, --index, totalJobs);
+        char** argv = removeFromMap(jobsTable, --index);
+        int pid = atoi(argv[0]);
         kill(pid, SIGCONT);
-        signal(SIGUSR1, jobsHandler);
-        signal(SIGCHLD, childHandler);
-        pause();
+        int status = 0;
+        waitpid(pid, &status, WUNTRACED);
+        if(WIFSTOPPED(status)) putInMap(jobsTable, -1, argv);
+        if(WIFEXITED(status)) return;
     }
 }
