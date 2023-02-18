@@ -1,7 +1,11 @@
 #include "executor.h"
 #include "cmdutils.h"
+#include <stdlib.h>
 
 #define MIN(X,Y) ((X > Y) ? Y : X)
+ 
+char* jobsTable[800];
+int totalJobs = 0;
 
 void executeCmd(char* cmd){
     char** cmdMap = splitCmd(cmd);
@@ -50,20 +54,41 @@ int handlePrograms(char** cmdMap) {
 int sysCall(char** argv, char** argvd){
     int pid = fork();
     if(pid == 0) {
+        // printf("Waiting for the child process\n");
+        signal(SIGTSTP, suspendHandler);
+        signal(SIGSTOP, suspendHandler);
         handleIORedirect(argv);
         execv(argvd[0], argvd);
         exit(5);
     }
     else {
-        int exitCode = 0;
-        waitpid(pid, &exitCode, 0);
+        putinJobsTable(pid, argv);
+        signal(SIGUSR1, jobsHandler);
+        signal(SIGCHLD, childHandler);
+        pause();
         free(argv);
         free(argvd);
-        if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -4;
-        if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5) return -5;
+        // int exitCode = 0;
+        // printf("Waiting for the process to sigchld\n");
+        // waitpid(pid, &exitCode, 0);
+        // printf("Waiting for the process AFTER sigchld\n");
+        // free(argv);
+        // if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -4;
+        // else if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5)  return -5;
     }
 
     return 0;
+}
+
+void putinJobsTable(int pid, char** argv){
+    char* s_pid = malloc(1000);
+    sprintf(s_pid, "%d", pid);
+    int idx = 0;
+    while(argv[idx] != NULL) {
+        strcat(s_pid, " ");
+        strcat(s_pid, argv[idx++]);
+    }
+    jobsTable[totalJobs++] = s_pid;
 }
 
 void handleIORedirect(char** argv) {
@@ -78,6 +103,8 @@ void handleIORedirect(char** argv) {
             appendMode = 1;
         } 
     }
+
+    free(argv);
 
     if(readFrom != NULL) {
         int accessible = access(readFrom, R_OK);
