@@ -99,6 +99,23 @@ void handleIORedirect(char** argv) {
     return;
 }
 
+void suspendHandler(int sig){
+    kill(getppid(), SIGUSR1);
+    signal(sig, SIG_DFL);
+}
+
+void jobsHandler(int sig) {
+}
+
+void childHandler(int sig) {
+    int exitCode = 0;
+    int pid = waitpid(-1, &exitCode, WNOHANG);
+    // printf("totaljobs before childHandle %d\n", totalJobs);
+    totalJobs = removeFromMap(jobsTable, pid, -1, totalJobs);
+    if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) fprintf(stderr, "Error: invalid file\n");
+    else if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5)  fprintf(stderr, "Error: invalid program\n");
+}
+
 int handleBuiltInCmd(char** cmdMap) {
     if(strcmp(cmdMap[0], "cd") == 0) {
         return chdir(cmdMap[1]);
