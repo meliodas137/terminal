@@ -103,3 +103,27 @@ char* getSanitizedCmd(char* cmd){
     free(cmd);
     return newCmd;
 }
+
+int removeFromMap(char** map, int id, int index, int map_size) {
+    int idx = 0;
+    if(index != -1){
+        char* s_pid = strtok(map[index], " ");
+        char* cmd = map[index];
+        while(idx < map_size - 1) map[idx] = map[++idx];
+        map[map_size-1] = cmd;
+        return atoi(s_pid);
+    }
+    while(idx < map_size) {
+        char** jobMap = splitCmd(map[idx]);
+        if(atoi(jobMap[0]) == id) {
+            free(map[idx]);
+            freeStrMap(jobMap);
+            map_size--;
+            break;
+        }
+        idx++;
+    }
+
+    while(idx < map_size) map[idx] = map[++idx];
+    return map_size;
+}
