@@ -104,14 +104,36 @@ int handleBuiltInCmd(char** cmdMap) {
         return chdir(cmdMap[1]);
     }
     if(strcmp(cmdMap[0], "exit") == 0) {
-        exit(0);
+        if(totalJobs != 0) fprintf(stderr, "Error: there are suspended jobs\n");
+        else exit(0);
     }
-    // if(strcmp(cmdMap[0], "jobs") == 0) {
-    //     jobs();
-    // }
-    // if(strcmp(cmdMap[0], "fg")) {
-    //     fg(cmdMap[1]);
-    // }
+    if(strcmp(cmdMap[0], "jobs") == 0) {
+        jobs();
+    }
+    if(strcmp(cmdMap[0], "fg") == 0) {
+        fg(cmdMap[1]);
+    }
 
     return 0;
+}
+
+void jobs(){
+    int idx = -1;
+    while(++idx < totalJobs) {
+        int j = 0;
+        while(jobsTable[idx][j++] != ' ');
+        printf("[%d] %s\n", idx+1, jobsTable[idx] + j);
+    }
+}
+
+void fg(char* jobNum) {
+    int index = atoi(jobNum);
+    if(index > totalJobs) fprintf(stderr,"Error: invalid job");
+    else {
+        int pid = removeFromMap(jobsTable, -1, --index, totalJobs);
+        kill(pid, SIGCONT);
+        signal(SIGUSR1, jobsHandler);
+        signal(SIGCHLD, childHandler);
+        pause();
+    }
 }
