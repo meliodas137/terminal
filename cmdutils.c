@@ -87,7 +87,7 @@ void freeStrMap(char** cmdMap){
 }
 
 char* getSanitizedCmd(char* cmd){
-    if(cmd[0] == '/') return cmd;
+    if(cmd[0] == '/' || cmd[0] == '.') return cmd;
     int idx = 0;
     char* newCmd;
     while(cmd[idx] != '\0') if(cmd[idx++] == '/') {
@@ -104,26 +104,32 @@ char* getSanitizedCmd(char* cmd){
     return newCmd;
 }
 
-int removeFromMap(char** map, int id, int index, int map_size) {
-    int idx = 0;
-    if(index != -1){
-        char* s_pid = strtok(map[index], " ");
-        char* cmd = map[index];
-        while(idx < map_size - 1) map[idx] = map[++idx];
-        map[map_size-1] = cmd;
-        return atoi(s_pid);
-    }
-    while(idx < map_size) {
-        char** jobMap = splitCmd(map[idx]);
-        if(atoi(jobMap[0]) == id) {
-            free(map[idx]);
-            freeStrMap(jobMap);
-            map_size--;
-            break;
-        }
+char** removeFromMap(char** map, int idx){ 
+    char* cmd = map[idx];
+    char** argv = splitCmd(cmd);
+    while(map[idx+1] != NULL) {
+        map[idx] = map[idx+1];
         idx++;
     }
+    free(cmd);
+    map[idx] = NULL;
+    return argv;
+}
 
-    while(idx < map_size) map[idx] = map[++idx];
-    return map_size;
+void putInMap(char** map, int pid, char** argv) {
+    char* s_pid = malloc(1000);
+    if(pid != -1) {
+        sprintf(s_pid, "%d", pid);
+        strcat(s_pid, " ");
+    }
+    int idx = 0;
+    while(argv[idx] != NULL) {
+        strcat(s_pid, argv[idx++]);
+        if(argv[idx] != NULL) strcat(s_pid, " ");
+    }
+    idx = -1;
+    while(map[++idx] != NULL);
+    map[idx] = s_pid;
+    map[++idx] = NULL;
+    return;
 }

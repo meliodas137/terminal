@@ -14,5 +14,6 @@ char** splitCmd(char* cmd);
 char* getcurDir(char* buffer);
 void freeStrMap(char** cmdMap);
 char* getSanitizedCmd(char* cmd);
-int removeFromMap(char** map, int id, int index, int map_size);
+void putInMap(char** map, int pid, char** argv);
+char** removeFromMap(char** map, int idx);
 #endif
