@@ -55,7 +55,7 @@ int sysCall(char** argv, char** argvd){
     if(pid == 0) {
         signal(SIGTSTP, suspendHandler);
         handleIORedirect(argv);
-        execv(argvd[0], argvd);
+        execvp(argvd[0], argvd);
         exit(5);
     }
     else {
@@ -85,7 +85,15 @@ void putinJobsTable(int pid, char** argv){
 void handleIORedirect(char** argv) {
     int appendMode = 0, idx = -1;
     char* writeTo = NULL, *readFrom = NULL;
-
+    char* program = argv[0];
+    char* newCmd = malloc(strlen(program)+9);
+    strcpy(newCmd, "/usr/bin/");
+    strcat(newCmd, program);
+    int progAccess = access(program, R_OK);
+    int cmdAccess = access(newCmd, R_OK);
+    free(newCmd);
+    if(progAccess == -1 && cmdAccess == -1) exit(5);
+    
     while(argv[++idx] != NULL){
         if(strcmp("<", argv[idx]) == 0) readFrom = argv[++idx];
         else if(strcmp(">", argv[idx]) == 0) writeTo = argv[++idx];

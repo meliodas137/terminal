@@ -97,11 +97,7 @@ char* getSanitizedCmd(char* cmd){
         free(cmd);
         return newCmd;
     }
-    newCmd = malloc(strlen(cmd)+9);
-    strcpy(newCmd, "/usr/bin/");
-    strcat(newCmd, cmd);
-    free(cmd);
-    return newCmd;
+    return cmd;
 }
 
 char** removeFromMap(char** map, int idx){ 
