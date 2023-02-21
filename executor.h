@@ -15,7 +15,6 @@ int handleBuiltInCmd(char** cmdMap);
 int handlePrograms(char** cmdMap);
 int sysCall(char** argv, char** argvd);
 void suspendHandler(int signal);
-void putinJobsTable(int pid, char** argv);
 void jobsHandler(int signal);
 void childHandler(int signal);
 void handleIORedirect(char** argv);

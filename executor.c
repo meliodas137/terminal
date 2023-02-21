@@ -5,7 +5,6 @@
 #define MIN(X,Y) ((X > Y) ? Y : X)
  
 char* jobsTable[800] = {NULL};
-int totalJobs = 0;
 
 void executeCmd(char* cmd){
     char** cmdMap = splitCmd(cmd);
@@ -69,17 +68,6 @@ int sysCall(char** argv, char** argvd){
     }
 
     return 0;
-}
-
-void putinJobsTable(int pid, char** argv){
-    char* s_pid = malloc(1000);
-    sprintf(s_pid, "%d", pid);
-    int idx = 0;
-    while(argv[idx] != NULL) {
-        strcat(s_pid, " ");
-        strcat(s_pid, argv[idx++]);
-    }
-    jobsTable[totalJobs++] = s_pid;
 }
 
 void handleIORedirect(char** argv) {
