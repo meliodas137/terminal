@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <errno.h>
 
 #ifndef _EXECUTOR_H_

@@ -30,7 +30,6 @@ bool validateCmd(char** cmd){
         else return false;
         idx++;
     }
-    // printf("idx:%d, currstate:%d\n", idx, currState);
     if(idx == 0 || endState == currState || currState == psuedoEnd || currState == terminate || currState == terminateStart || currState == 5) return true;
     return false;
 }

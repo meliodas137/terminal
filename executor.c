@@ -1,6 +1,5 @@
 #include "executor.h"
 #include "cmdutils.h"
-#include <stdlib.h>
 
 #define MIN(X,Y) ((X > Y) ? Y : X)
  
