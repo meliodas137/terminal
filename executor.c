@@ -31,33 +31,55 @@ int runCmd(char** cmdMap){
 }
 
 int handlePrograms(char** cmdMap) {
-    int argc = 0, idx = -1, argd = 1000;
+    int argc = 0, idx = -1, argd = 1000, readFd = -1;
+    int pipefd[2] = {-1,-1};
 
     while(cmdMap[++idx] != NULL){
-        if(strcmp("|", cmdMap[idx]) == 0) break;
+        if(strcmp("|", cmdMap[idx]) == 0) {
+            readFd = pipefd[0];
+            if(pipefd[1] != -1) {
+                close(pipefd[1]);
+                pipefd[0] = -1;
+            }
+            pipe(pipefd);
+            int status = extractCmdAndRun(cmdMap, argc, idx, argd, readFd, pipefd[1]);
+            argc = 0; argd = 1000; idx++;
+            if(status < 0) return status;
+        }
         if(strcmp("<", cmdMap[idx]) == 0 || strcmp(">>", cmdMap[idx]) == 0 || strcmp(">", cmdMap[idx]) == 0) argd = MIN(argd, idx);
         argc++;
     }
-    argd = MIN(argd, argc);
+    readFd = pipefd[0];
+    if(pipefd[1] != -1) {
+        close(pipefd[1]);
+        pipefd[1] = -1;
+    } 
+    return extractCmdAndRun(cmdMap, argc, idx, argd, readFd, -1);
+}
+
+int extractCmdAndRun(char** cmdMap, int argc, int idx, int argd, int readFd, int writeFd){ 
+    int start = idx - argc;
+    argd = MIN(argd - start, argc);
     char** argv = malloc((argc+1)*sizeof(char*));
     char** argvd = malloc((argd+1)*sizeof(char*));
     argv[argc] = NULL;
     argvd[argd] = NULL;
-    cmdMap[0] = getSanitizedCmd(cmdMap[0]);
-    while(--argc >= 0) argv[argc] = cmdMap[argc];
-    while(--argd >= 0) argvd[argd] = cmdMap[argd];
-    return sysCall(argv, argvd);
+    cmdMap[start] = getSanitizedCmd(cmdMap[start]);
+    while(--argc >= 0) argv[argc] = cmdMap[start+argc];
+    while(--argd >= 0) argvd[argd] = cmdMap[start+argd];
+    return sysCall(argv, argvd, readFd, writeFd);
 }
 
-int sysCall(char** argv, char** argvd){
+int sysCall(char** argv, char** argvd, int read, int write){
     int pid = fork();
     if(pid == 0) {
         signal(SIGTSTP, suspendHandler);
-        handleIORedirect(argv);
+        handleIORedirect(argv, read, write);
         execvp(argvd[0], argvd);
         exit(5);
     }
     else {
+        if(read != -1) close(read);
         int exitCode = 0;
         waitpid(pid, &exitCode, WUNTRACED);
         if(WIFSTOPPED(exitCode)) putInMap(jobsTable, pid, argv);
@@ -70,7 +92,7 @@ int sysCall(char** argv, char** argvd){
     return 0;
 }
 
-void handleIORedirect(char** argv) {
+void handleIORedirect(char** argv, int read, int write) {
     int appendMode = 0, idx = -1;
     char* writeTo = NULL, *readFrom = NULL;
     char* program = argv[0];
@@ -82,6 +104,16 @@ void handleIORedirect(char** argv) {
     free(newCmd);
     if(progAccess == -1 && cmdAccess == -1) exit(5);
     
+    if(read != -1){
+        dup2(read, 0);
+        close(read);
+    }
+
+    if(write != -1){
+        dup2(write, 1);
+        close(write);
+    }
+
     while(argv[++idx] != NULL){
         if(strcmp("<", argv[idx]) == 0) readFrom = argv[++idx];
         else if(strcmp(">", argv[idx]) == 0) writeTo = argv[++idx];
