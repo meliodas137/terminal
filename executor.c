@@ -4,6 +4,9 @@
 #define MIN(X,Y) ((X > Y) ? Y : X)
  
 char* jobsTable[800] = {NULL};
+int cpids[100] = {0};
+char** args[100] = {NULL};
+int ch = 0;
 
 void executeCmd(char* cmd){
     char** cmdMap = splitCmd(cmd);
@@ -32,7 +35,7 @@ int runCmd(char** cmdMap){
 int handlePrograms(char** cmdMap) {
     int argc = 0, idx = -1, argd = 1000, readFd = -1;
     int pipefd[2] = {-1,-1};
-
+    ch = 0;
     while(cmdMap[++idx] != NULL){
         if(strcmp("|", cmdMap[idx]) == 0) {
             readFd = pipefd[0];
@@ -41,9 +44,8 @@ int handlePrograms(char** cmdMap) {
                 pipefd[0] = -1;
             }
             pipe(pipefd);
-            int status = extractCmdAndRun(cmdMap, argc, idx, argd, readFd, pipefd[1]);
+            extractCmdAndRun(cmdMap, argc, idx, argd, readFd, pipefd[1]);
             argc = 0; argd = 1000; idx++;
-            if(status < 0) return status;
         }
         if(strcmp("<", cmdMap[idx]) == 0 || strcmp(">>", cmdMap[idx]) == 0 || strcmp(">", cmdMap[idx]) == 0) argd = MIN(argd, idx);
         argc++;
@@ -53,10 +55,24 @@ int handlePrograms(char** cmdMap) {
         close(pipefd[1]);
         pipefd[1] = -1;
     } 
-    return extractCmdAndRun(cmdMap, argc, idx, argd, readFd, -1);
+    extractCmdAndRun(cmdMap, argc, idx, argd, readFd, -1);
+    return setWaits();
 }
 
-int extractCmdAndRun(char** cmdMap, int argc, int idx, int argd, int readFd, int writeFd){ 
+int setWaits(){
+    int idx = -1;
+    while(++idx < ch) {
+        int exitCode = 0;
+        waitpid(cpids[idx], &exitCode, WUNTRACED);
+        if(WIFSTOPPED(exitCode)) putInMap(jobsTable, cpids[idx], args[idx]);
+        free(args[idx]);
+        if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -4;
+        else if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5)  return -5;
+    }
+    return 0;
+}
+
+void extractCmdAndRun(char** cmdMap, int argc, int idx, int argd, int readFd, int writeFd){ 
     int start = idx - argc;
     argd = MIN(argd - start, argc);
     char** argv = malloc((argc+1)*sizeof(char*));
@@ -66,7 +82,10 @@ int extractCmdAndRun(char** cmdMap, int argc, int idx, int argd, int readFd, int
     cmdMap[start] = getSanitizedCmd(cmdMap[start]);
     while(--argc >= 0) argv[argc] = cmdMap[start+argc];
     while(--argd >= 0) argvd[argd] = cmdMap[start+argd];
-    return sysCall(argv, argvd, readFd, writeFd);
+    int cpid = sysCall(argv, argvd, readFd, writeFd);
+    cpids[ch] = cpid;
+    args[ch]= argv;
+    ch++;
 }
 
 int sysCall(char** argv, char** argvd, int read, int write){
@@ -77,18 +96,9 @@ int sysCall(char** argv, char** argvd, int read, int write){
         execvp(argvd[0], argvd);
         exit(5);
     }
-    else {
-        if(read != -1) close(read);
-        int exitCode = 0;
-        waitpid(pid, &exitCode, WUNTRACED);
-        if(WIFSTOPPED(exitCode)) putInMap(jobsTable, pid, argv);
-        free(argv);
-        free(argvd);
-        if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 4) return -4;
-        else if(WIFEXITED(exitCode) && WEXITSTATUS(exitCode) == 5)  return -5;
-    }
-
-    return 0;
+    free(argvd);
+    if(read != -1) close(read);
+    return pid;
 }
 
 void handleIORedirect(char** argv, int read, int write) {

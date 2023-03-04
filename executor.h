@@ -19,8 +19,9 @@ void suspendHandler(int signal);
 void jobsHandler(int signal);
 void childHandler(int signal);
 void handleIORedirect(char** argv, int read, int write);
-int extractCmdAndRun(char** cmdMap, int argc, int idx, int argd, int readFd, int writeFd);
+void extractCmdAndRun(char** cmdMap, int argc, int idx, int argd, int readFd, int writeFd);
 void jobs();
+int setWaits();
 void fg(char* jobNum);
 
 #endif
